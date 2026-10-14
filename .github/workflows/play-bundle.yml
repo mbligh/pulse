@@ -1,4 +1,5 @@
 name: Build and upload Play Store bundle
+# Re-publish Pulse internal testing with a fresh version code.
 on:
   push:
     branches: [main]
