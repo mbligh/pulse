@@ -4,11 +4,11 @@ plugins {
 }
 android {
     namespace = "com.mbligh.pulse"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.mbligh.pulse"
         minSdk = 29
-        targetSdk = 35
+        targetSdk = 36
         versionCode = System.getenv("PULSE_VERSION_CODE")?.toIntOrNull() ?: 1
         versionName = "0.1.0"
     }
