@@ -14,6 +14,9 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.ScrollView
+import java.text.DateFormat
+import java.util.Date
 import androidx.core.app.ActivityCompat
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -24,6 +27,24 @@ class MainActivity : Activity() {
     private val handler = Handler(Looper.getMainLooper())
     private var armed = false
     private lateinit var status: TextView
+    private lateinit var diagnostics: TextView
+
+    private fun refreshDiagnostics() {
+        val prefs = getSharedPreferences("pulse", MODE_PRIVATE)
+        fun date(key: String): String {
+            val timestamp = prefs.getLong(key, 0L)
+            return if (timestamp == 0L) "Never" else DateFormat.getDateTimeInstance().format(Date(timestamp))
+        }
+        diagnostics.text = "Last scan: ${date("lastScan")}\n" +
+            "Last activity: ${date("lastActivity")}\n" +
+            "Events in last scan: ${prefs.getInt("lastEventCount", 0)}\n\n" +
+            "Recent events (up to 100):\n" + prefs.getString("eventHistory", "").orEmpty()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::diagnostics.isInitialized) refreshDiagnostics()
+    }
     private val helpAction = Runnable {
         if (armed) {
             armed = false
@@ -79,7 +100,26 @@ class MainActivity : Activity() {
             }
         }
         layout.addView(help)
-        setContentView(layout)
+        layout.addView(Button(this).apply {
+            text = "Scan now"
+            setOnClickListener {
+                val ops = getSystemService(APP_OPS_SERVICE) as AppOpsManager
+                val permitted = ops.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(), packageName) == AppOpsManager.MODE_ALLOWED
+                if (permitted) {
+                    val count = ActivityWorker.scan(this@MainActivity)
+                    status.text = "Scan complete: $count activity events."
+                    refreshDiagnostics()
+                } else {
+                    status.text = "Grant usage access first."
+                }
+            }
+        })
+        diagnostics = TextView(this).apply { textSize = 13f; setTextIsSelectable(true) }
+        layout.addView(diagnostics)
+        val scroll = ScrollView(this).apply { addView(layout) }
+        setContentView(scroll)
+        refreshDiagnostics()
     }
     override fun onDestroy() {
         handler.removeCallbacks(helpAction)
