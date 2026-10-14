@@ -12,6 +12,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  statuses: write
 concurrency:
   group: pulse-play
   cancel-in-progress: false
@@ -102,3 +103,38 @@ jobs:
       - name: Remove signing files
         if: always()
         run: rm -rf .private-signing
+
+  report-status:
+    needs: [configuration, bundle]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Publish observable Play release status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          BUNDLE_RESULT: ${{ needs.bundle.result }}
+          READY: ${{ needs.configuration.outputs.ready }}
+          PUBLISH: ${{ needs.configuration.outputs.publish }}
+        run: |
+          if [ "$BUNDLE_RESULT" = success ] && [ "$PUBLISH" = true ]; then
+            state=success
+            description="Signed bundle uploaded to Play internal testing"
+          elif [ "$READY" != true ] || [ "$PUBLISH" != true ]; then
+            state=error
+            description="Play publishing credentials are missing"
+          else
+            state=failure
+            description="Play publishing failed or was skipped"
+          fi
+          jq -n --arg state "$state" --arg desc "$description" \
+            --arg url "https://github.com/$REPO/actions/runs/$RUN_ID" \
+            '{state:$state,context:"pulse/google-play-internal",description:$desc,target_url:$url}' > status.json
+          curl --fail-with-body --retry 3 -sS \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -X POST "https://api.github.com/repos/$REPO/statuses/$SHA" \
+            --data @status.json
