@@ -6,6 +6,7 @@ import android.app.AppOpsManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -100,6 +101,12 @@ class MainActivity : Activity() {
             }
         }
         layout.addView(help)
+        layout.addView(Button(this).apply {
+            text = "Privacy policy"
+            setOnClickListener {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://mbligh.github.io/pulse/privacy.html")))
+            }
+        })
         layout.addView(Button(this).apply {
             text = "Scan now"
             setOnClickListener {
