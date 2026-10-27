@@ -56,13 +56,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
         with:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
       - name: Install Android SDK
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.11.1'
       - name: Restore Pulse upload key
@@ -85,7 +85,7 @@ jobs:
           cat .private-signing/verification.txt
           grep -q 'jar verified' .private-signing/verification.txt
       - name: Save signed Play bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Pulse-play-bundle
           path: app/build/outputs/bundle/release/app-release.aab
