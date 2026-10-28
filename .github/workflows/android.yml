@@ -2,12 +2,6 @@ name: Android CI
 on:
   push:
     branches: [main]
-    paths:
-      - 'app/**'
-      - '*.gradle.kts'
-      - 'gradle.properties'
-      - 'gradle/**'
-      - '.github/workflows/android.yml'
   pull_request:
     paths:
       - 'app/**'
@@ -16,6 +10,9 @@ on:
       - 'gradle/**'
       - '.github/workflows/android.yml'
   workflow_dispatch:
+concurrency:
+  group: pulse-android-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -49,6 +46,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # Avoid tagging an older commit after main has changed. In particular,
+          # GITHUB_TOKEN cannot create releases for commits whose workflow files
+          # differ from those on the current default branch.
+          CURRENT_SHA="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq '.sha')"
+          if [ "$CURRENT_SHA" != "$GITHUB_SHA" ]; then
+            echo "::notice::Skipping release for superseded commit $GITHUB_SHA (main is $CURRENT_SHA)."
+            exit 0
+          fi
           TAG="build-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
           cp app/build/outputs/apk/debug/app-debug.apk pulse-debug.apk
           gh release create "$TAG" pulse-debug.apk \

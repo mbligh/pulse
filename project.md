@@ -21,7 +21,7 @@ Low-battery, privacy-oriented Android dead man's handle. Detect meaningful user 
 - Native activity with usage-access and location permission entry points.
 - Hourly WorkManager usage-history scan; locally stores last scan and latest observed unlock/foreground event.
 - Manual three-second HELP action; 30-second location attempt and Android share chooser. **Requires user to choose/send; not automatic delivery.**
-- GitHub Actions builds an unsigned debug APK on pushes to main and PRs affecting build inputs.
+- GitHub Actions builds an unsigned debug APK on every push to main and PRs affecting build inputs; the current main build also creates a GitHub debug APK release.
 - Not yet implemented: GPS displacement detector; step/call/charging detectors; contact configuration; automatic inactivity alert; SMTP/SMS; durable delivery queue; location fallback quality improvements; notification/grace workflow; comprehensive tests.
 
 ## Safety/reliability constraints
@@ -31,3 +31,8 @@ Low-battery, privacy-oriented Android dead man's handle. Detect meaningful user 
 - A foreground-app resume does not prove human interaction; improve filtering before treating it as strong evidence.
 - Never report an alert as delivered merely because a chooser was opened.
 - Validate behavior on a Pixel 8, including Doze, reboot, permission revocation, and GPS uncertainty.
+
+## Build and publishing
+- Android CI runs on every push to `main`, regardless of changed paths. Concurrent runs on the same ref cancel superseded builds. Debug APKs are uploaded as workflow artifacts; only a run for the current `main` commit creates a GitHub Release, preventing releases for stale commits with differing workflow files.
+- The Play Store workflow separately builds a signed bundle and publishes to the internal testing track when the signing and Play credentials are configured. Its current status is reported as a commit status.
+- `docs/privacy.html` is intended for GitHub Pages at `https://mbligh.github.io/pulse/privacy.html`. **One-time manual prerequisite:** open repository **Settings > Pages** and select **GitHub Actions** for **Build and deployment > Source**. `GITHUB_TOKEN` cannot enable Pages automatically. The Pages workflow checks this setting and provides an actionable failure message when the site is not configured.
